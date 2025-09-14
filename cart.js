@@ -2,7 +2,7 @@
 (function () {
   // === Configuración de Checkout (AJUSTA ESTOS VALORES) ===
   const MP_PUBLIC_KEY = 'APP_USR-5bf9ff8a-c192-4c4a-afa4-7e6b326cd0cb'
-const BACKEND_URL   = 'http://127.0.0.1:3001'
+const BACKEND_URL   = 'https://grailmarket.onrender.com'
 
   const CREATE_PREF_ENDPOINT = '/api/create_preference'; // <- endpoint del backend
 
