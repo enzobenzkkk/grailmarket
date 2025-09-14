@@ -1,80 +1,178 @@
 <!DOCTYPE html>
 <html lang="es">
-<head><link rel="icon" href="/logo.jpg" type="image/jpeg">
-
-  <button id="checkout">Proceder al pago</button>
-<script>
-  document.getElementById('checkout')?.addEventListener('click', checkout);
-</script>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Checkout | GRAILMARKET</title>
+
+  <!-- Favicon (opcional, usa tu logo) -->
+  <link rel="icon" href="/logo.jpg" type="image/jpeg">
+
+  <!-- Tailwind (opcional, solo para estilos rápidos) -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- SDK Mercado Pago -->
+  <!-- SDK Mercado Pago (NECESARIO para abrir Checkout Pro) -->
   <script src="https://sdk.mercadopago.com/js/v2"></script>
-<script src="cart.js"></script>
 
-  <!-- Tu inventario y carrito -->
-  <script src="products.js" defer></script>
-  <script src="cart.js" defer></script>
+  <!-- Tu clave pública TEST (reemplaza por la tuya real) -->
+  <script>
+    window.MP_PUBLIC_KEY = "TEST-REEMPLAZA_CON_TU_PUBLIC_KEY";
+  </script>
 
+  <!-- Estilos mínimos opcionales -->
   <style>
     body { background: linear-gradient(180deg,#FFD580 0%,#FF7A00 100%); }
   </style>
 </head>
 <body class="min-h-screen text-gray-900">
-  <div class="max-w-3xl mx-auto px-4 py-10">
-    <a href="catalogo.html" class="text-sm hover:underline">← Seguir comprando</a>
+  <main class="max-w-3xl mx-auto px-4 py-10">
+    <h1 class="text-4xl font-bold mb-6">Checkout</h1>
 
-    <h1 class="text-3xl font-bold mt-4 mb-6">Resumen de tu carrito</h1>
+    <!-- Resumen del carrito -->
+    <section id="summary" class="bg-white/90 backdrop-blur rounded-2xl shadow p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Tu pedido</h2>
+      <div id="items" class="divide-y divide-black/5"></div>
+      <div class="flex items-center justify-between mt-4">
+        <span class="text-gray-600">Subtotal</span>
+        <strong id="subtotal" class="text-lg">—</strong>
+      </div>
+    </section>
 
-    <div id="checkoutList" class="divide-y divide-gray-200 bg-white/90 backdrop-blur rounded-2xl shadow p-6 mb-6"></div>
-
-    <div class="flex items-center justify-between text-xl mb-6">
-      <span>Total</span>
-      <strong id="checkoutTotal">—</strong>
-    </div>
-
-    <button id="checkoutPay" class="rounded-2xl bg-black text-white px-6 py-3 font-medium hover:opacity-90">
+    <!-- Botón de pago -->
+    <button id="checkout"
+            class="w-full rounded-2xl bg-black text-white py-3 text-lg font-medium shadow hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2">
       Proceder al pago
     </button>
-  </div>
 
+    <!-- Mensajes -->
+    <p class="text-xs text-gray-700 mt-4">
+      * Pagos procesados por Mercado Pago. 100% originales · Envíos a todo Chile.
+    </p>
+  </main>
+
+  <!-- Tu lógica de carrito y checkout -->
   <script>
-    const CLP = new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
-    const listEl = document.getElementById('checkoutList');
-    const totalEl = document.getElementById('checkoutTotal');
+    // === CONFIG FRONT ===
+    const BACKEND_URL = "https://grailmarket.onrender.com"; // <-- tu backend en Render (sin / al final)
+    const CLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
-    function renderCheckout(){
-      const cart = JSON.parse(localStorage.getItem('cart-v1')||'[]');
-      if(!cart.length){
-        listEl.innerHTML = '<p class="text-gray-500">Tu carrito está vacío.</p>';
-        totalEl.textContent = CLP.format(0);
-        return;
+    // === Render resumen rápido del carrito desde localStorage ===
+    function loadCart(){ try { return JSON.parse(localStorage.getItem('cart-v1')||'[]'); } catch { return []; } }
+    function subtotal(cart){ return cart.reduce((t,i)=> t + (i.price||0)*(i.qty||0), 0); }
+
+    function renderSummary(){
+      const cart = loadCart();
+      const wrap = document.getElementById('items');
+      wrap.innerHTML = '';
+      if (!cart.length){
+        wrap.innerHTML = '<div class="py-4 text-sm text-gray-600">Tu carrito está vacío.</div>';
+      } else {
+        cart.forEach(i=>{
+          const row = document.createElement('div');
+          row.className = 'py-3 flex items-center justify-between';
+          row.innerHTML = `
+            <div>
+              <div class="font-medium">${i.name || 'Producto'}</div>
+              <div class="text-xs text-gray-500">Cant: ${i.qty || 1}${i.size ? ' · Talla ' + i.size : ''}</div>
+            </div>
+            <div class="text-sm font-semibold">${CLP.format((i.price||0)*(i.qty||0))}</div>
+          `;
+          wrap.appendChild(row);
+        });
       }
-      const products = window.products || [];
-      listEl.innerHTML = '';
-      let total=0;
-      cart.forEach(i=>{
-        const p = products.find(x=>x.id===i.id) || {};
-        total += i.qty*i.price;
-        listEl.innerHTML += `
-          <div class="flex items-center justify-between py-3">
-            <span>${p.name||'Producto'} ${i.size?`· Talla ${i.size}`:''} x${i.qty}</span>
-            <span>${CLP.format(i.qty*i.price)}</span>
-          </div>`;
-      });
-      totalEl.textContent = CLP.format(total);
+      document.getElementById('subtotal').textContent = CLP.format(subtotal(cart));
     }
 
-    document.addEventListener('DOMContentLoaded', renderCheckout);
-
-    // Este botón llama a la función checkout() que ya definimos en cart.js
-    document.getElementById('checkoutPay').addEventListener('click', () => {
-      if (typeof checkout === 'function') checkout();
-      else alert('No se encontró la función de pago. Revisa que cart.js esté cargado.');
+    // === Checkout robusto con logs y fallback a init_point ===
+    document.addEventListener('click', (e)=>{
+      const btn = e.target.closest('#checkout');
+      if (!btn) return;
+      e.preventDefault();
+      checkout();
     });
+
+    async function checkout(){
+      // Captura errores globales (para debug)
+      window.onerror = (m, s, l, c, e) => console.log('[GM] window.onerror:', m, s, l, c, e);
+      window.onunhandledrejection = (ev) => console.log('[GM] unhandledrejection:', ev.reason);
+
+      try {
+        console.log('[GM] checkout() start');
+
+        const cart = loadCart();
+        console.log('[GM] cart:', cart);
+        const items = cart.map(i => ({ title: i.name, quantity: i.qty, unit_price: i.price }));
+        if (!items.length){ alert('Tu carrito está vacío.'); return; }
+
+        const url = BACKEND_URL.replace(/\/+$/,'') + '/api/create_preference';
+        console.log('[GM] POST URL:', url);
+
+        let res;
+        try {
+          res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type':'application/json' },
+            body: JSON.stringify({ items })
+          });
+        } catch (netErr) {
+          console.error('[GM] fetch failed:', netErr);
+          alert('No se pudo contactar al backend. Revisa la URL/CORS.');
+          return;
+        }
+
+        console.log('[GM] status:', res.status);
+        let body; try { body = await res.clone().json(); } catch { body = await res.text(); }
+        console.log('[GM] body:', body);
+        if (!res.ok){ alert('Error creando preferencia: ' + res.status); return; }
+
+        const preferenceId = body.preferenceId || body?.preference?.id || body?.id || null;
+        const initPoint    = body.init_point    || body?.preference?.init_point || null;
+        console.log('[GM] preferenceId:', preferenceId, 'initPoint:', initPoint);
+
+        if (!preferenceId && !initPoint){
+          alert('El backend no devolvió preferenceId ni init_point.');
+          return;
+        }
+
+        // SDK de MP
+        if (typeof MercadoPago !== 'function'){
+          console.warn('[GM] SDK no cargado → fallback init_point');
+          if (initPoint){ location.href = initPoint; return; }
+          alert('SDK de Mercado Pago no cargado.');
+          return;
+        }
+
+        // Public Key
+        console.log('[GM] MP_PUBLIC_KEY:', window.MP_PUBLIC_KEY || '(no definida)');
+        if (!window.MP_PUBLIC_KEY || !String(window.MP_PUBLIC_KEY).startsWith('TEST-')){
+          alert('MP_PUBLIC_KEY inválida o no definida (TEST-...).');
+          return;
+        }
+
+        // Abrir Checkout Pro (redirigir en misma pestaña)
+        const mp = new MercadoPago(window.MP_PUBLIC_KEY, { locale: 'es-CL' });
+        mp.checkout({
+          preference: { id: preferenceId },
+          autoOpen: true,
+          redirectMode: 'self',
+          theme: { elementsColor: '#FF7A00' }
+        });
+
+        // Fallback si no abre pronto
+        if (initPoint){
+          setTimeout(() => {
+            console.log('[GM] Fallback → init_point por timeout');
+            try { location.href = initPoint; } catch {}
+          }, 1500);
+        }
+      } catch (err){
+        console.error('[GM] checkout error:', err);
+        alert('No se pudo iniciar el pago. Revisa la consola.');
+      }
+    }
+
+    // Inicializa
+    document.addEventListener('DOMContentLoaded', renderSummary);
   </script>
 </body>
 </html>
