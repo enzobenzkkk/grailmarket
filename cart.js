@@ -200,7 +200,51 @@
       alert('No se pudo iniciar el pago. Mira la consola.');
     }
   }
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('#checkout');
+  if (!el) return;
+  console.log('[GM] checkout button clicked');
+  e.preventDefault();
+  checkout();
+});
 
+async function checkout(){
+  try {
+    console.log('[GM] checkout() start');
+    const cart = JSON.parse(localStorage.getItem('cart-v1') || '[]');
+    console.log('[GM] cart items:', cart);
+    const items = cart.map(i => ({ title: i.name, quantity: i.qty, unit_price: i.price }));
+    if (!items.length) { alert('Tu carrito está vacío.'); return; }
+
+    const url = `${BACKEND_URL}/api/create_preference`;
+    console.log('[GM] POST URL:', url);
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ items })
+    });
+
+    console.log('[GM] status:', res.status);
+    let body; try { body = await res.clone().json(); } catch { body = await res.text(); }
+    console.log('[GM] body:', body);
+    if (!res.ok) throw new Error(`Backend respondió ${res.status}`);
+
+    if (typeof MercadoPago !== 'function') { alert('SDK de Mercado Pago no cargado.'); return; }
+    console.log('[GM] MP_PUBLIC_KEY:', MP_PUBLIC_KEY);
+
+    const mp = new MercadoPago(MP_PUBLIC_KEY, { locale: 'es-CL' });
+    mp.checkout({
+      preference: { id: body.preferenceId },
+      autoOpen: true,
+      redirectMode: 'self',
+      theme: { elementsColor: '#FF7A00' }
+    });
+  } catch (err) {
+    console.error('[GM] checkout error:', err);
+    alert('No se pudo iniciar el pago. Revisa la consola.');
+  }
+}
   // 8) Wire-up inicial
   document.addEventListener('DOMContentLoaded', () => {
     injectCartPanel();
