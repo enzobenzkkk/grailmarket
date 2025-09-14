@@ -19,7 +19,20 @@ const corsOptions = {
   allowedHeaders: ['Content-Type']
 };
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // preflight
+app.options('*', cors(corsOptions));
+app.use(express.json());
+
+// 👇 añadir este bloque aquí
+app.use((req, _res, next) => {
+  if (req.url.includes('//')) {
+    req.url = req.url.replace(/\/{2,}/g, '/');
+  }
+  next();
+  // rutas...
+app.get('/api/health', ...);
+app.post('/api/create_preference', ...);
+});
+
 
 app.use(express.json());
 
