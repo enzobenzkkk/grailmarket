@@ -210,13 +210,14 @@ document.addEventListener('click', (e) => {
 
 async function checkout(){
   try {
-    console.log('[GM] checkout() start');
-    const cart = JSON.parse(localStorage.getItem('cart-v1') || '[]');
-    console.log('[GM] cart items:', cart);
-    const items = cart.map(i => ({ title: i.name, quantity: i.qty, unit_price: i.price }));
-    if (!items.length) { alert('Tu carrito está vacío.'); return; }
+    console.log('[GM] checkout() start/direct');
 
-    const url = `${BACKEND_URL}/api/create_preference`;
+    const cart = JSON.parse(localStorage.getItem('cart-v1') || '[]');
+    const items = cart.map(i => ({ title: i.name, quantity: i.qty, unit_price: i.price }));
+    if (!items.length){ alert('Tu carrito está vacío.'); return; }
+
+    const BACKEND_URL = 'https://grailmarket.onrender.com'; // sin / final
+    const url = BACKEND_URL.replace(/\/+$/,'') + '/api/create_preference';
     console.log('[GM] POST URL:', url);
 
     const res = await fetch(url, {
@@ -228,20 +229,16 @@ async function checkout(){
     console.log('[GM] status:', res.status);
     let body; try { body = await res.clone().json(); } catch { body = await res.text(); }
     console.log('[GM] body:', body);
-    if (!res.ok) throw new Error(`Backend respondió ${res.status}`);
 
-    if (typeof MercadoPago !== 'function') { alert('SDK de Mercado Pago no cargado.'); return; }
-    console.log('[GM] MP_PUBLIC_KEY:', MP_PUBLIC_KEY);
+    if (!res.ok) { alert('Backend respondió ' + res.status); return; }
 
-    const mp = new MercadoPago(MP_PUBLIC_KEY, { locale: 'es-CL' });
-    mp.checkout({
-      preference: { id: body.preferenceId },
-      autoOpen: true,
-      redirectMode: 'self',
-      theme: { elementsColor: '#FF7A00' }
-    });
-  } catch (err) {
-    console.error('[GM] checkout error:', err);
+    const initPoint = body.init_point || body?.preference?.init_point || null;
+    if (!initPoint){ alert('El backend no devolvió init_point.'); return; }
+
+    // ✅ Redirige directamente al checkout de Mercado Pago
+    window.location.href = initPoint;
+  } catch (err){
+    console.error('[GM] checkout error (direct):', err?.message || String(err), err);
     alert('No se pudo iniciar el pago. Revisa la consola.');
   }
 }
