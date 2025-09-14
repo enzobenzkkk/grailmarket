@@ -7,9 +7,25 @@ import { MercadoPagoConfig, Preference } from 'mercadopago';
 const app = express();
 
 // CORS: permite llamadas desde tu front con Live Server
+import cors from 'cors';
+
+// …
+import cors from 'cors';
+
 app.use(cors({
-  origin: ['http://127.0.0.1:5500', 'http://localhost:5500']
+  origin: [
+    'https://grailmarket.shop',
+    'https://www.grailmarket.shop',
+    // (opcional: para pruebas locales)
+    'http://127.0.0.1:5500',
+    'http://localhost:5500'
+  ],
+  methods: ['GET','POST','OPTIONS'],
+  allowedHeaders: ['Content-Type']
 }));
+
+// por si algún proxy hace preflight manual
+app.options('*', cors());
 app.use(express.json());
 
 // Cliente Mercado Pago (SDK v2) con ACCESS TOKEN de TEST desde .env
@@ -18,7 +34,9 @@ const mpClient = new MercadoPagoConfig({
   options: { timeout: 5000 }
 });
 const preference = new Preference(mpClient);
-
+app.get('/', (req, res) => {
+  res.type('text').send('GrailMarket backend OK. Use /api/health');
+});
 // Healthcheck
 app.get('/api/health', (req, res) => {
   res.json({
@@ -45,7 +63,7 @@ app.post('/api/create_preference', async (req, res) => {
       currency_id: 'CLP'
     })).filter(i => i.unit_price > 0 && i.quantity > 0);
 
-    const FRONT_BASE = process.env.FRONT_BASE || 'http://127.0.0.1:5500';
+    const FRONT_BASE = process.env.FRONT_BASE || 'https://grailmarket.onrender.com';
 
     const body = {
       items,
@@ -76,6 +94,4 @@ app.post('/api/create_preference', async (req, res) => {
 
 // Puerto
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`✅ Backend de MP (SDK v2) corriendo en http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`✅ Backend MP v2 en :${PORT}`));

@@ -1,16 +1,32 @@
-// cart.js — Inyecta el panel lateral, conecta el botón 🛒 y Checkout con Mercado Pago
+// cart.js — Carrito lateral + Checkout (MP v2) + FIX de URL
+
 (function () {
-  // === Configuración de Checkout (AJUSTA ESTOS VALORES) ===
-  const MP_PUBLIC_KEY = 'APP_USR-5bf9ff8a-c192-4c4a-afa4-7e6b326cd0cb'
-const BACKEND_URL   = 'https://grailmarket.onrender.com'
+  // ====== CONFIG ======
+  const MP_PUBLIC_KEY = 'TEST-tu-Public-Key-REAL'; // <- tu Public Key TEST/PROD
+  // Por defecto usa Render (prod). Si estás en localhost, se auto-cambia abajo.
+  let BACKEND_URL = 'https://grailmarket.onrender.com';
 
-  const CREATE_PREF_ENDPOINT = '/api/create_preference'; // <- endpoint del backend
+  // Si desarrollas local (Live Server), usa el backend local:
+  if (location.hostname === '127.0.0.1' || location.hostname === 'localhost') {
+    BACKEND_URL = 'http://127.0.0.1:3001';
+  }
 
-  // Utilidad
+  // Logs de diagnóstico
+  console.log('[GM] FRONT origin:', location.origin);
+  console.log('[GM] BACKEND_URL (inicial):', BACKEND_URL);
+
+  // ====== Utilidades ======
   const $ = (s) => document.querySelector(s);
   const CLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
-  // ====== (Opcional) Animación linda al abrir ======
+  // (Anti “doble slash”): compone rutas de forma segura
+  const joinURL = (base, path) => {
+    const b = base.endsWith('/') ? base.slice(0, -1) : base;
+    const p = path.startsWith('/') ? path : `/${path}`;
+    return b + p;
+  };
+
+  // ====== Animación linda al abrir ======
   (function injectAnimationCSS(){
     if (document.getElementById('cart-anim-css')) return;
     const st = document.createElement('style');
@@ -26,9 +42,9 @@ const BACKEND_URL   = 'https://grailmarket.onrender.com'
     document.head.appendChild(st);
   })();
 
-  // 1) Inyecta el HTML del panel si no existe
+  // ====== Inyecta el panel lateral ======
   function injectCartPanel() {
-    if ($('#cartPanel')) return; // ya existe
+    if ($('#cartPanel')) return;
     const tpl = document.createElement('template');
     tpl.innerHTML = `
 <aside id="cartPanel" class="fixed inset-y-0 right-0 w-full sm:w-[440px] bg-white/95 backdrop-blur shadow-2xl translate-x-full transition-transform duration-300 z-[100] flex flex-col border-l border-black/5 rounded-none sm:rounded-l-3xl">
@@ -53,7 +69,7 @@ const BACKEND_URL   = 'https://grailmarket.onrender.com'
     document.body.appendChild(tpl.content);
   }
 
-  // 2) Estado del carrito
+  // ====== Estado del carrito ======
   let cart = [];
   function loadCart() {
     try { cart = JSON.parse(localStorage.getItem('cart-v1') || '[]'); } catch { cart = []; }
@@ -64,16 +80,17 @@ const BACKEND_URL   = 'https://grailmarket.onrender.com'
   }
   function subtotal() { return cart.reduce((t, i) => t + i.price * i.qty, 0); }
 
-  // 3) Fuente de productos (usa tu products.js si está presente)
+  // Fuente de productos global (si existe)
   function getProducts() {
     if (Array.isArray(window.products) && window.products.length) return window.products;
-    return []; // fallback vacío si no hay products.js
+    return [];
   }
 
-  // 4) Render del panel
+  // ====== Render del panel ======
   function renderCart() {
     const list = $('#cartList');
     if (!list) return;
+
     list.innerHTML = '';
     if (!cart.length) {
       list.innerHTML = '<div class="p-6 text-sm text-gray-500">Tu carrito está vacío.</div>';
@@ -102,6 +119,7 @@ const BACKEND_URL   = 'https://grailmarket.onrender.com'
         list.appendChild(row);
       });
     }
+
     const sub = $('#subtotal');
     if (sub) sub.textContent = CLP.format(subtotal());
 
@@ -116,14 +134,12 @@ const BACKEND_URL   = 'https://grailmarket.onrender.com'
         if (btn.dataset.action === 'dec') it.qty -= 1;
         if (btn.dataset.action === 'rm') it.qty = 0;
         cart = cart.filter((x) => x.qty > 0);
-        saveCart();
-        renderCart();
-        updateBadge();
+        saveCart(); renderCart(); updateBadge();
       });
     });
   }
 
-  // 5) Abrir/cerrar
+  // ====== Abrir/cerrar ======
   function openCart() {
     const panel = $('#cartPanel'), bd = $('#backdrop');
     if (!panel || !bd) return;
@@ -141,14 +157,14 @@ const BACKEND_URL   = 'https://grailmarket.onrender.com'
     bd.addEventListener('transitionend', () => bd.classList.add('pointer-events-none'), { once: true });
   }
 
-  // 6) Badge en el header
+  // ====== Badge ======
   function updateBadge() {
     const count = cart.reduce((n, i) => n + (i.qty || 0), 0);
     const el = document.getElementById('cartCount');
     if (el) el.textContent = String(count);
   }
 
-  // 7) API global para agregar al carrito desde cards o product.html
+  // ====== API global para agregar al carrito ======
   window.addToCart = function (id, size) {
     const PRODUCTS = getProducts();
     const p = PRODUCTS.find((x) => x.id === id);
@@ -158,50 +174,53 @@ const BACKEND_URL   = 'https://grailmarket.onrender.com'
     saveCart(); renderCart(); updateBadge(); openCart();
   };
 
-  // === Checkout con Mercado Pago (redirección en la misma pestaña) ===
+  // ====== Checkout con Mercado Pago (v2) ======
   async function checkout(){
-  try {
-    const items = (JSON.parse(localStorage.getItem('cart-v1') || '[]')).map(i => ({
-      title: i.name || 'Producto', quantity: i.qty || 1, unit_price: i.price || 0
-    }));
-    console.log('[GM] items:', items);
-    if (!items.length) { alert('Tu carrito está vacío.'); return; }
+    try {
+      const items = cart.map(i => ({
+        title: i.name,
+        quantity: i.qty,
+        unit_price: i.price
+      }));
+      if (!items.length) { alert('Tu carrito está vacío.'); return; }
 
-    if (typeof MercadoPago !== 'function') {
-      alert('SDK de Mercado Pago no cargado en esta página.');
-      return;
+      // POST seguro (sin doble slash)
+      const url = joinURL(BACKEND_URL, '/api/create_preference');
+      console.log('[GM] POST', url, items);
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ items })
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(()=> '');
+        throw new Error(`Error al crear preferencia (${res.status}) ${text}`);
+      }
+      const { preferenceId } = await res.json();
+      if (!preferenceId) throw new Error('Respuesta sin preferenceId');
+
+      if (typeof MercadoPago !== 'function') {
+        alert('SDK de Mercado Pago no cargado.\nAgrega <script src="https://sdk.mercadopago.com/js/v2"></script> antes de cart.js');
+        return;
+      }
+      const mp = new MercadoPago(MP_PUBLIC_KEY, { locale: 'es-CL' });
+
+      // Abre Checkout Pro en la misma pestaña
+      mp.checkout({
+        preference: { id: preferenceId },
+        autoOpen: true,
+        redirectMode: 'self',
+        theme: { elementsColor: '#FF7A00' }
+      });
+    } catch (err) {
+      console.error('[GM] checkout error:', err);
+      alert('No se pudo iniciar el pago. Revisa la consola para más detalle.');
     }
-
-    const res = await fetch(`${BACKEND_URL}/api/create_preference`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ items })
-    });
-    console.log('[GM] status:', res.status);
-    const data = await res.json().catch(()=> ({}));
-    console.log('[GM] body:', data);
-    if (!res.ok || !data.preferenceId) {
-      alert(`Error al crear preferencia (${res.status}). Revisa la consola.`);
-      return;
-    }
-
-    const mp = new MercadoPago(MP_PUBLIC_KEY, { locale: 'es-CL' });
-    mp.checkout({
-      preference: { id: data.preferenceId },
-      autoOpen: true,
-      redirectMode: 'self',
-      theme: { elementsColor: '#FF7A00' }
-    });
-  } catch (e) {
-    console.error('[GM] checkout error:', e);
-    alert('No se pudo iniciar el pago. Revisa la consola.');
   }
-}
 
-
-  // Exponer checkout para poder llamarlo desde checkout.html
-  window.checkout = checkout;
-
-  // 8) Wire-up inicial
+  // ====== Wire-up inicial ======
   document.addEventListener('DOMContentLoaded', () => {
     injectCartPanel();
     loadCart();
@@ -212,43 +231,24 @@ const BACKEND_URL   = 'https://grailmarket.onrender.com'
     $('#closeCart')?.addEventListener('click', closeCart);
     $('#backdrop')?.addEventListener('click', closeCart);
 
-    // Botón "Proceder al pago" del panel lateral
+    // Botón "Proceder al pago"
     $('#checkout')?.addEventListener('click', checkout);
 
-    // Botón del header: si tiene data-slide="true" abre panel; si no, navega al href
+    // Botón del header (id="cartBtn")
     const btn = document.getElementById('cartBtn');
     if (btn) {
-      btn.classList.add('ml-auto'); // empuja a la derecha dentro de contenedor flex
       btn.addEventListener('click', (e) => {
-        const wantsSlide = btn.dataset.slide === 'true';
-        if (wantsSlide) {
-          e.preventDefault();
-          openCart();
-        }
+        e.preventDefault();
+        openCart();
       });
     }
 
-    // ✅ Fallback: si no existe el botón 🛒, lo inyectamos arriba a la derecha
-    (function ensureCartButton(){
-      let cartBtn = document.getElementById('cartBtn');
-      if (!cartBtn) {
-        const wrap = document.createElement('div');
-        wrap.innerHTML = `
-          <a href="checkout.html" id="cartBtn"
-             class="fixed top-4 right-4 z-[120] rounded-full border border-gray-300 bg-white/90 px-4 py-2 shadow">
-            🛒 <span>Carrito</span>
-            <span id="cartCount"
-                  class="absolute -top-2 -right-2 text-[10px] bg-orange-600 text-white rounded-full px-1.5 py-0.5">0</span>
-          </a>`;
-        document.body.appendChild(wrap.firstElementChild);
-      }
-    })();
+    // Log final para confirmar URL en producción
+    console.log('[GM] BACKEND_URL (final):', BACKEND_URL);
   });
 
   // Escucha cambios desde otras pestañas
   window.addEventListener('storage', (e) => {
-    if (e.key === 'cart-v1') {
-      loadCart(); renderCart(); updateBadge();
-    }
+    if (e.key === 'cart-v1') { loadCart(); renderCart(); updateBadge(); }
   });
 })();

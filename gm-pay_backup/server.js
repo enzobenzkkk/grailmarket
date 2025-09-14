@@ -5,7 +5,7 @@ import cors from 'cors';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 
 const app = express();
-app.use(cors({ origin: ['http://127.0.0.1:5500','http://localhost:5500'] }));
+app.use(cors({ origin: ['https://grailmarket.onrender.com','http://localhost:5500'] }));
 app.use(express.json());
 
 const mpClient = new MercadoPagoConfig({
@@ -30,7 +30,7 @@ app.post('/api/create_preference', async (req, res) => {
       quantity: Number(i.quantity) || 1,
     })).filter(i => i.unit_price > 0 && i.quantity > 0);
 
-    const FRONT_BASE = process.env.FRONT_BASE || 'http://127.0.0.1:5500';
+    const FRONT_BASE = process.env.FRONT_BASE || 'https://grailmarket.onrender.com';
     const prefBody = {
       items,
       back_urls: {
