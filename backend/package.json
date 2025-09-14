@@ -1,0 +1,16 @@
+{
+  "name": "grailmarket-backend",
+  "version": "1.0.0",
+  "description": "Backend para pagos con Mercado Pago de GrailMarket",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mercadopago": "^2.8.0"
+  }
+}

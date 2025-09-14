@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Producto | GRAILMARKET</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Layout (header/footer) -->
+  <script src="layout.js" defer></script>
+
+  <!-- Inventario de productos -->
+  <script src="products.js"></script>
+
+  <!-- Carrito: inyecta el panel lateral y lógica -->
+  <script src="cart.js" defer></script>
+
+  <!-- Estilos -->
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+  <style>
+    .font-bebas{font-family:'Bebas Neue',sans-serif}
+    body{background:linear-gradient(180deg,#FFD580 0%,#FF7A00 100%)}
+  </style>
+</head>
+<body class="text-gray-900">
+  <!-- Header -->
+  <div id="header"></div>
+
+  <main class="max-w-6xl mx-auto px-4 py-10">
+    <a href="catalogo.html" class="inline-flex items-center gap-2 text-sm mb-6 hover:underline">← Volver</a>
+    <div id="content" class="grid lg:grid-cols-2 gap-10 items-start"></div>
+  </main>
+
+  <!-- Footer -->
+  <div id="footer"></div>
+
+  <script>
+    const CLP = new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
+    const qs = new URLSearchParams(location.search);
+    const id = Number(qs.get('id'));
+    const p = (window.products||[]).find(x=>x.id===id);
+
+    function render(){
+      const root = document.getElementById('content');
+      if(!p){ root.innerHTML='<div class="text-sm text-gray-600">Producto no encontrado.</div>'; return; }
+
+      const thumbs = (p.images && p.images.length ? p.images : [p.img]);
+
+      root.innerHTML = `
+        <section class="grid grid-cols-[92px,1fr] gap-4">
+          <div class="hidden lg:flex lg:flex-col gap-3 sticky top-24 h-[70vh] overflow-auto pr-1">
+            ${thumbs.map((src,i)=>`
+              <button class="thumb border rounded-xl overflow-hidden aspect-square">
+                <img loading="lazy" src="${src}" alt="thumb ${i+1}" class="w-full h-full object-cover"/>
+              </button>`).join('')}
+          </div>
+          <div class="sticky top-24">
+            <div class="rounded-2xl overflow-hidden shadow-lg bg-white">
+              <img id="mainImg" src="${thumbs[0]}" alt="${p.name}" class="w-full max-h-[70vh] object-cover"/>
+            </div>
+          </div>
+        </section>
+
+        <section class="grid gap-4 lg:sticky lg:top-24">
+          <h1 class="text-5xl font-bebas !text-black leading-tight">${p.name}</h1>
+          <div class="text-gray-600">${p.category}</div>
+          <div class="text-3xl font-semibold">${CLP.format(p.price)}</div>
+          ${p.condition ? `<div class="text-sm text-gray-700">Estado: <span class="font-medium">${p.condition}</span></div>` : ''}
+
+          ${(p.sizes && p.sizes.length) ? `
+            <label class="block mt-2 text-sm">Talla
+              <select id="size" class="mt-1 w-48 rounded-lg border px-3 py-2">
+                <option value="">Seleccionar</option>
+                ${p.sizes.map(s=>`<option value="${s}">${s}</option>`).join("")}
+              </select>
+            </label>` : ''}
+
+          ${p.description ? `<p class="text-sm text-gray-700">${p.description}</p>` : ''}
+
+          <div class="flex items-center gap-4 mt-2">
+            <button class="rounded-xl bg-orange-600 text-white px-6 py-3" id="btnCart">Agregar al carrito</button>
+            <a target="_blank" href="https://wa.me/56982646076?text=Hola,%20me%20interesa:%20${encodeURIComponent(p.name)}" class="rounded-xl border px-6 py-3">WhatsApp</a>
+          </div>
+        </section>
+      `;
+
+      // thumbs → imagen principal
+      const main = document.getElementById('mainImg');
+      document.querySelectorAll('.thumb').forEach(btn=>{
+        btn.addEventListener('click',()=>{
+          const img = btn.querySelector('img');
+          main.src = img.src;
+          document.querySelectorAll('.thumb').forEach(b=>b.classList.remove('ring-2','ring-orange-500'));
+          btn.classList.add('ring-2','ring-orange-500');
+        });
+      });
+
+      // botón agregar → usa addToCart de cart.js (abre panel a la derecha)
+      document.getElementById('btnCart').addEventListener('click',()=>{
+        const sizeSel = document.getElementById('size');
+        const size = sizeSel ? (sizeSel.value || null) : null;
+        if (sizeSel && !size) { alert('Selecciona una talla'); return; }
+        addToCart(p.id, size); // definido en cart.js
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', render);
+  </script>
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
+<script src="cart.js"></script>
+
+
+
+</body>
+</html>
+
+

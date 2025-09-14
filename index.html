@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GRAILMARKET – Inicio</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Layout (header/footer) -->
+  <script src="layout.js" defer></script>
+
+  <!-- Productos -->
+  <script src="products.js" defer></script>
+
+  <!-- Carrito (inyecta panel lateral y lógica) -->
+  <script src="cart.js" defer></script>
+
+  <style>
+    body {
+      background: linear-gradient(180deg, #FFD580 0%, #FF7A00 100%);
+    }
+  </style>
+</head>
+<body class="text-gray-900">
+  <!-- Header inyectado -->
+  <div id="header"></div>
+
+  <!-- Hero -->
+  <section class="border-b border-gray-200 bg-gradient-to-r from-secondary to-primary text-white">
+    <div class="max-w-6xl mx-auto px-4 py-12 grid md:grid-cols-2 gap-8 items-center">
+      <div>
+        <h1 class="text-6xl font-extrabold">Bienvenido a GRAILMARKET</h1>
+        <p class="mt-4">Compra/Venta/Permuta de prendas exclusivas y originales.</p>
+        <a href="catalogo.html" class="inline-block mt-5 rounded-2xl bg-black text-white px-5 py-3 text-sm shadow hover:bg-orange-600">Ver catálogo</a>
+      </div>
+      <div class="md:justify-self-end">
+        <img src="img/logo.jpg" alt="Logo hero" class="rounded-2xl shadow w-full max-w-xs"/>
+      </div>
+    </div>
+  </section>
+
+  <!-- Catálogo de inicio -->
+  <main id="catalogo" class="max-w-6xl mx-auto px-4 py-10">
+    <h2 class="text-2xl font-semibold mb-6">Productos destacados</h2>
+    <div id="grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+  </main>
+
+  <!-- Footer inyectado -->
+  <div id="footer"></div>
+
+  <script>
+    const CLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
+
+    function renderGrid(list){
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      (list || []).forEach(p => {
+        const card = document.createElement('article');
+        card.className = 'bg-white rounded-2xl shadow hover:shadow-xl transition overflow-hidden flex flex-col';
+        card.innerHTML = `
+          <a href="product.html?id=${p.id}">
+            <img src="${p.img}" alt="${p.name}" class="h-40 w-full object-cover"/>
+          </a>
+          <div class="p-4 flex-1 grid gap-2">
+            <h3 class="font-medium">${p.name}</h3>
+            <p class="text-sm text-gray-500">${p.category}</p>
+            <div class="mt-auto flex items-center justify-between">
+              <span class="font-semibold">${CLP.format(p.price)}</span>
+              <button onclick="addToCart(${p.id})" class="rounded-xl bg-orange-600 text-white px-3 py-2 text-sm hover:bg-orange-500">Agregar</button>
+            </div>
+          </div>`;
+        grid.appendChild(card);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderGrid(window.products || []);
+    });
+  </script>
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
+<script src="cart.js"></script>
+
+</body>
+</html>

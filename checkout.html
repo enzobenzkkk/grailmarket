@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <button id="checkout">Proceder al pago</button>
+<script>
+  document.getElementById('checkout')?.addEventListener('click', checkout);
+</script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Checkout | GRAILMARKET</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- SDK Mercado Pago -->
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
+<script src="cart.js"></script>
+
+  <!-- Tu inventario y carrito -->
+  <script src="products.js" defer></script>
+  <script src="cart.js" defer></script>
+
+  <style>
+    body { background: linear-gradient(180deg,#FFD580 0%,#FF7A00 100%); }
+  </style>
+</head>
+<body class="min-h-screen text-gray-900">
+  <div class="max-w-3xl mx-auto px-4 py-10">
+    <a href="catalogo.html" class="text-sm hover:underline">← Seguir comprando</a>
+
+    <h1 class="text-3xl font-bold mt-4 mb-6">Resumen de tu carrito</h1>
+
+    <div id="checkoutList" class="divide-y divide-gray-200 bg-white/90 backdrop-blur rounded-2xl shadow p-6 mb-6"></div>
+
+    <div class="flex items-center justify-between text-xl mb-6">
+      <span>Total</span>
+      <strong id="checkoutTotal">—</strong>
+    </div>
+
+    <button id="checkoutPay" class="rounded-2xl bg-black text-white px-6 py-3 font-medium hover:opacity-90">
+      Proceder al pago
+    </button>
+  </div>
+
+  <script>
+    const CLP = new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
+    const listEl = document.getElementById('checkoutList');
+    const totalEl = document.getElementById('checkoutTotal');
+
+    function renderCheckout(){
+      const cart = JSON.parse(localStorage.getItem('cart-v1')||'[]');
+      if(!cart.length){
+        listEl.innerHTML = '<p class="text-gray-500">Tu carrito está vacío.</p>';
+        totalEl.textContent = CLP.format(0);
+        return;
+      }
+      const products = window.products || [];
+      listEl.innerHTML = '';
+      let total=0;
+      cart.forEach(i=>{
+        const p = products.find(x=>x.id===i.id) || {};
+        total += i.qty*i.price;
+        listEl.innerHTML += `
+          <div class="flex items-center justify-between py-3">
+            <span>${p.name||'Producto'} ${i.size?`· Talla ${i.size}`:''} x${i.qty}</span>
+            <span>${CLP.format(i.qty*i.price)}</span>
+          </div>`;
+      });
+      totalEl.textContent = CLP.format(total);
+    }
+
+    document.addEventListener('DOMContentLoaded', renderCheckout);
+
+    // Este botón llama a la función checkout() que ya definimos en cart.js
+    document.getElementById('checkoutPay').addEventListener('click', () => {
+      if (typeof checkout === 'function') checkout();
+      else alert('No se encontró la función de pago. Revisa que cart.js esté cargado.');
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "gm-pay-backup",
+  "version": "1.0.0",
+  "description": "Backend alternativo para pagos (SDK v2) de GrailMarket",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "mercadopago": "^2.9.0"
+  }
+}

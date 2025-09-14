@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contacto | GRAILMARKET</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+  <style>
+    body { background: linear-gradient(180deg, #FFD580 0%, #FF7A00 100%); }
+    .font-bebas { font-family: 'Bebas Neue', sans-serif; }
+  </style>
+  <script src="layout.js" defer></script>
+</head>
+<body class="text-gray-900">
+  <div id="header"></div>
+  <main class="max-w-3xl mx-auto px-4 py-12">
+    <h1 class="font-bebas text-5xl mb-6 text-black">Contacto</h1>
+    <p class="mb-6">Puedes comunicarte con nosotros a través de los siguientes canales:</p>
+    <ul class="space-y-4 text-lg">
+      <li>📱 WhatsApp: <a href="https://wa.me/56982646076" target="_blank" class="text-green-600 hover:underline">+56 9 8264 6076</a></li>
+      <li>📸 Instagram: <a href="https://instagram.com/grailmarket_" target="_blank" class="text-pink-600 hover:underline">@grailmarket_</a></li>
+      <li>✉️ Email: <a href="mailto:ventas@grailmarket.cl" class="text-blue-600 hover:underline">ventas@grailmarket.cl</a></li>
+    </ul>
+  </main>
+  <div id="footer"></div>
+  <!-- Panel lateral del carrito -->
+<aside id="cartPanel" class="fixed inset-y-0 right-0 w-full sm:w-[420px] bg-white shadow-2xl translate-x-full transition-transform duration-300 z-40 flex flex-col">
+  <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+    <h3 class="font-semibold text-lg">Tu carrito</h3>
+    <button id="closeCart" class="px-2 py-1 rounded-lg border hover:bg-gray-100">✕</button>
+  </div>
+  <div id="cartList" class="flex-1 overflow-y-auto divide-y divide-gray-100"></div>
+  <div class="border-t border-gray-200 p-5 grid gap-3">
+    <div class="flex items-center justify-between text-sm">
+      <span>Subtotal</span>
+      <strong id="subtotal">$0</strong>
+    </div>
+    <button id="checkout" class="rounded-xl bg-orange-600 text-white px-4 py-3 text-sm shadow hover:opacity-90">Proceder al pago</button>
+    <p class="text-xs text-gray-500">* Integra Mercado Pago, Webpay o Stripe en este botón.</p>
+  </div>
+</aside>
+<div id="backdrop" class="fixed inset-0 bg-black/30 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity z-30"></div>
+
+<script>
+  const CLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
+  function cartSubtotal() { return cart.reduce((t,i)=> t + i.price*i.qty, 0); }
+  function renderCart() {
+    const list = document.getElementById('cartList'); list.innerHTML = '';
+    if (!cart.length) { list.innerHTML = '<div class="p-6 text-sm text-gray-500">Tu carrito está vacío.</div>'; }
+    else {
+      cart.forEach(i => {
+        const p = (window.products||[]).find(p=>p.id===i.id);
+        const row = document.createElement('div'); row.className = 'flex items-center gap-3 p-4';
+        row.innerHTML = `
+          <img src="${p.img}" alt="${p.name}" class="h-14 w-14 rounded-lg object-cover"/>
+          <div class="flex-1">
+            <div class="font-medium text-sm">${p.name}</div>
+            <div class="text-xs text-gray-500">${CLP.format(p.price)}${i.size?` | Talla ${i.size}`:''}</div>
+            <div class="mt-2 inline-flex items-center gap-2 rounded-lg border px-2 py-1 text-sm">
+              <button class="px-2" data-action="dec" data-id="${i.id}" data-size="${i.size||''}">−</button>
+              <span class="min-w-[2ch] text-center">${i.qty}</span>
+              <button class="px-2" data-action="inc" data-id="${i.id}" data-size="${i.size||''}">+</button>
+            </div>
+          </div>
+          <div class="grid justify-items-end">
+            <div class="text-sm font-semibold">${CLP.format(i.qty * i.price)}</div>
+            <button class="mt-2 text-xs text-red-600 hover:underline" data-action="rm" data-id="${i.id}" data-size="${i.size||''}">Quitar</button>
+          </div>`;
+        list.appendChild(row);
+      });
+    }
+    document.getElementById('subtotal').textContent = CLP.format(cartSubtotal());
+    list.querySelectorAll('button[data-action]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const id = Number(btn.dataset.id), size = btn.dataset.size||null;
+        if(btn.dataset.action==='inc') changeQty(id, size, +1);
+        if(btn.dataset.action==='dec') changeQty(id, size, -1);
+        if(btn.dataset.action==='rm') removeFromCart(id, size);
+      });
+    });
+  }
+
+  let cart = JSON.parse(localStorage.getItem('cart-v1') || '[]');
+  function saveCart() { localStorage.setItem('cart-v1', JSON.stringify(cart)); renderCart(); }
+  function addToCart(id, size){ const p=(window.products||[]).find(p=>p.id===id); const ex=cart.find(i=>i.id===id && i.size===size); if(ex) ex.qty++; else cart.push({id,qty:1,price:p.price,name:p.name,size}); saveCart(); }
+  function removeFromCart(id, size){ cart=cart.filter(i=>!(i.id===id && i.size===size)); saveCart(); }
+  function changeQty(id, size, d){ const it=cart.find(i=>i.id===id && i.size===size); if(!it) return; it.qty+=d; if(it.qty<=0) removeFromCart(id,size); saveCart(); }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    renderCart();
+    document.getElementById('closeCart').addEventListener('click', ()=> {
+      document.getElementById('cartPanel').classList.add('translate-x-full');
+      const bd=document.getElementById('backdrop'); bd.style.opacity=0; bd.addEventListener('transitionend', ()=> bd.classList.add('pointer-events-none'), {once:true});
+    });
+    document.getElementById('backdrop').addEventListener('click', ()=> document.getElementById('closeCart').click());
+    document.getElementById('checkout').addEventListener('click', ()=> alert('Aquí integras tu pasarela de pago 🛒'));
+  });
+</script>
+<!-- Carrito lateral -->
+<aside id="cartPanel" class="fixed inset-y-0 right-0 w-full sm:w-[420px] bg-white shadow-2xl translate-x-full transition-transform duration-300 z-40 flex flex-col">
+  <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+    <h3 class="font-semibold text-lg">Tu carrito</h3>
+    <button id="closeCart" class="px-2 py-1 rounded-lg border hover:bg-gray-100">✕</button>
+  </div>
+  <div id="cartList" class="flex-1 overflow-y-auto divide-y divide-gray-100"></div>
+  <div class="border-t border-gray-200 p-5 grid gap-3">
+    <div class="flex items-center justify-between text-sm">
+      <span>Subtotal</span>
+      <strong id="subtotal">$0</strong>
+    </div>
+    <button id="checkout" class="rounded-xl bg-orange-600 text-white px-4 py-3 text-sm shadow hover:opacity-90">Proceder al pago</button>
+    <p class="text-xs text-gray-500">* Integra Mercado Pago, Webpay o Stripe en este botón.</p>
+  </div>
+</aside>
+<div id="backdrop" class="fixed inset-0 bg-black/30 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity z-30"></div>
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+<script src="cart.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Cinturones | GRAILMARKET</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- ✅ SDK Mercado Pago -->
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
+<script src="cart.js"></script>
+
+  <!-- Layout / Productos / Carrito -->
+  <script src="layout.js" defer></script>
+  <script src="products.js" defer></script>
+  <script src="cart.js" defer></script>
+
+  <style>
+    body { background: linear-gradient(180deg, #FFD580 0%, #FF7A00 100%); }
+  </style>
+</head>
+<body class="text-gray-900">
+  <div id="header"></div>
+
+  <main class="max-w-6xl mx-auto px-4 py-10">
+    <h1 class="text-3xl font-bold mb-6">Cinturones</h1>
+
+    <div id="grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+  </main>
+
+  <div id="footer"></div>
+
+  <script>
+    const CLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
+    const $ = s => document.querySelector(s);
+
+    function renderGrid(list){
+      const grid = $('#grid'); grid.innerHTML = '';
+      (list||[]).filter(p => p.category === 'Cinturón').forEach(p=>{
+        const card = document.createElement('article');
+        card.className = 'bg-white rounded-2xl shadow hover:shadow-xl transition overflow-hidden flex flex-col';
+        card.innerHTML = `
+          <a href="product.html?id=${p.id}">
+            <img src="${p.img}" alt="${p.name}" class="h-40 w-full object-cover"/>
+          </a>
+          <div class="p-4 flex-1 grid gap-2">
+            <h3 class="font-medium">${p.name}</h3>
+            <p class="text-sm text-gray-500">${p.category}</p>
+            <div class="mt-auto flex items-center justify-between">
+              <span class="font-semibold">${CLP.format(p.price)}</span>
+              <button onclick="addToCart(${p.id})" class="rounded-xl bg-orange-600 text-white px-3 py-2 text-sm hover:bg-orange-500">Agregar</button>
+            </div>
+          </div>`;
+        grid.appendChild(card);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderGrid(window.products || []);
+    });
+  </script>
+</body>
+</html>
