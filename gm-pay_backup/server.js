@@ -4,9 +4,23 @@ import express from 'express';
 import cors from 'cors';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 
-const app = express();
-app.use(cors({ origin: ['https://grailmarket.onrender.com','http://localhost:5500'] }));
-app.use(express.json());
+import cors from 'cors';
+
+// CORS para producción y dev
+app.use(cors({
+  origin: [
+    'https://grailmarket.shop',
+    'https://www.grailmarket.shop',
+    // (opcional: para pruebas locales)
+    'http://127.0.0.1:5500',
+    'http://localhost:5500'
+  ],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type']
+}));
+
+// por si algún proxy hace preflight manual
+app.options('*', cors());
 
 const mpClient = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN,
