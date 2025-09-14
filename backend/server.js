@@ -28,9 +28,6 @@ app.use((req, _res, next) => {
     req.url = req.url.replace(/\/{2,}/g, '/');
   }
   next();
-  // rutas...
-app.get('/api/health', ...);
-app.post('/api/create_preference', ...);
 });
 
 
@@ -57,7 +54,26 @@ const mpClient = new MercadoPagoConfig({
   options: { timeout: 8000 }
 });
 const preference = new Preference(mpClient);
+// Normaliza // a / (por si el front vuelve a mandar doble slash)
+app.use((req, _res, next) => {
+  if (req.url.includes('//')) req.url = req.url.replace(/\/{2,}/g, '/');
+  next();
+});
+app.all('/api/create_preference', (req, res, next) => {
+  if (req.method === 'OPTIONS') return res.sendStatus(204); // preflight
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST' });
+  return next();
+});
 
+// Tu POST real debajo:
+app.post('/api/create_preference', async (req, res) => {
+  // ...
+});
+// Log mínimo de lo que entra (método y ruta)
+app.use((req, _res, next) => {
+  console.log('[REQ]', req.method, req.url);
+  next();
+});
 // Crear preferencia
 app.post('/api/create_preference', async (req, res) => {
   try {
@@ -100,4 +116,9 @@ app.post('/api/create_preference', async (req, res) => {
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`✅ Backend MP v2 corriendo en :${PORT}`);
+});
+// 404 handler al final, después de todas las rutas
+app.use((req, res) => {
+  console.warn('[404]', req.method, req.url);
+  res.status(404).json({ error: 'Not found', path: req.url, method: req.method });
 });
